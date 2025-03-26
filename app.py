@@ -4,6 +4,7 @@ from scipy.io.wavfile import write
 from scipy.signal import butter, filtfilt
 import matplotlib.pyplot as plt
 import tempfile
+import json
 
 # --- UI Setup ---
 st.set_page_config(page_title="SoundLab Pro Ultimate", layout="wide")
