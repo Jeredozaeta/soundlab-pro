@@ -181,33 +181,38 @@ amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 els
 amp_data = amp_sample.tolist()
 amp_json = json.dumps(amp_data).replace("</", "<\\/")
 
+# --- 3D Data Conversion ---
+amp_preview = np.abs((preview_left + preview_right) / 2)
+amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
+amp_data = amp_sample.tolist()
+amp_json_safe = json.dumps(amp_data).replace("\\", "\\\\").replace("'", "\\'").replace("</", "<\\/")
+
 # --- 3D Animation using Three.js ---
-st.subheader("3D Sound Animation")
 three_js_visual = f"""
-<div id=\"container\"></div>
-<script src=\"https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js\"></script>
+<div id="container"></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
 <script>
-  const ampData = JSON.parse('{amp_json}');
+const ampData = JSON.parse('{amp_json_safe}');
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({{ alpha: true }});
-  renderer.setSize(400, 400);
-  document.getElementById("container").appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({{ alpha: true }});
+renderer.setSize(400, 400);
+document.getElementById("container").appendChild(renderer.domElement);
 
-  const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
-  const material = new THREE.MeshStandardMaterial({{ color: 0xff00ff, wireframe: true }});
-  const torusKnot = new THREE.Mesh(geometry, material);
-  scene.add(torusKnot);
+const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+const material = new THREE.MeshStandardMaterial({{ color: 0xff00ff, wireframe: true }});
+const torusKnot = new THREE.Mesh(geometry, material);
+scene.add(torusKnot);
 
-  const light = new THREE.PointLight(0xffffff, 1, 100);
-  light.position.set(10, 10, 10);
-  scene.add(light);
+const light = new THREE.PointLight(0xffffff, 1, 100);
+light.position.set(10, 10, 10);
+scene.add(light);
 
-  camera.position.z = 5;
+camera.position.z = 5;
 
-  let index = 0;
-  function animate() {{
+let index = 0;
+function animate() {{
     requestAnimationFrame(animate);
     const amp = ampData[index % ampData.length];
     const scale = 1 + (amp * 2);
@@ -216,10 +221,14 @@ three_js_visual = f"""
     torusKnot.rotation.y += 0.01 + amp * 0.05;
     index++;
     renderer.render(scene, camera);
-  }}
+}}
 
-  animate();
+animate();
 </script>
 """
 
-components.html(three_js_visual, height=400)
+# --- Render HTML ---
+try:
+    components.html(three_js_visual, height=400)
+except Exception as e:
+    st.error(f"3D animation failed: {e}")
