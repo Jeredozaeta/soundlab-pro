@@ -148,16 +148,6 @@ if enabled_fx:
 else:
     st.write("*No audio FX applied.*")
 
-# --- Waveform Visualization ---
-st.subheader("Waveform Visualizer")
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 4), sharex=True)
-ax1.plot(t[:1000], left[:1000], color='blue')
-ax1.set_title("Left Channel")
-ax2.plot(t[:1000], right[:1000], color='red')
-ax2.set_title("Right Channel")
-fig.tight_layout()
-st.pyplot(fig)
-
 # --- Export & Playback ---
 stereo = np.stack((left, right), axis=-1)
 output = np.int16(stereo * 32767)
@@ -181,11 +171,19 @@ import streamlit.components.v1 as components
 
 # --- 3D Animation Placeholder using Three.js ---
 st.subheader("3D Sound Animation")
-three_js_visual = f"""
-<div id="container"></div>
-<script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
-<script>
-  const ampData = {amp_json};
+import json
+
+# Properly escape the JSON for safe injection
+amp_preview = np.abs((left + right) / 2)
+amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
+amp_data = amp_sample.tolist()
+import json
+
+# Properly escape the JSON for safe injection
+amp_preview = np.abs((left + right) / 2)
+amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
+amp_data = amp_sample.tolist()
+amp_json = json.dumps(amp_data).replace('</', '<\\/')  # prevents script-breaking </script>
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
