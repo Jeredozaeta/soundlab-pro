@@ -169,21 +169,21 @@ except Exception as e:
 
 import streamlit.components.v1 as components
 
-# --- 3D Animation Placeholder using Three.js ---
+# --- 3D Data Conversion ---
+amp_preview = np.abs((left + right) / 2)
+amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
+amp_data = amp_sample.tolist()
+amp_json = json.dumps(amp_data).replace("</", "<\\/")  # prevents crashing from </script>
+
+# --- 3D Animation using Three.js ---
+import streamlit.components.v1 as components
+
 st.subheader("3D Sound Animation")
-import json
-
-# Properly escape the JSON for safe injection
-amp_preview = np.abs((left + right) / 2)
-amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
-amp_data = amp_sample.tolist()
-import json
-
-# Properly escape the JSON for safe injection
-amp_preview = np.abs((left + right) / 2)
-amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
-amp_data = amp_sample.tolist()
-amp_json = json.dumps(amp_data).replace('</', '<\\/')  # prevents script-breaking </script>
+three_js_visual = f"""
+<div id="container"></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
+<script>
+  const ampData = JSON.parse('{amp_json}');
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
@@ -205,12 +205,10 @@ amp_json = json.dumps(amp_data).replace('</', '<\\/')  # prevents script-breakin
   let index = 0;
   function animate() {{
     requestAnimationFrame(animate);
-
     const scale = 1 + (ampData[index % ampData.length] * 2);
     torusKnot.scale.set(scale, scale, scale);
     torusKnot.rotation.x += 0.01 + ampData[index % ampData.length] * 0.05;
     torusKnot.rotation.y += 0.01 + ampData[index % ampData.length] * 0.05;
-
     index++;
     renderer.render(scene, camera);
   }}
@@ -219,4 +217,4 @@ amp_json = json.dumps(amp_data).replace('</', '<\\/')  # prevents script-breakin
 </script>
 """
 
-components.html(three_js_visual, height=300)
+components.html(three_js_visual, height=400)
