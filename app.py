@@ -128,16 +128,21 @@ max_val = max(np.max(np.abs(left)), np.max(np.abs(right)))
 if max_val > 0:
     left /= max_val
     right /= max_val
+
+# --- Preview Trim ---
+preview_duration = min(30, duration)  # Trim preview to 30 seconds
+preview_samples = int(preview_duration * sample_rate)
+preview_left = left[:preview_samples]
+preview_right = right[:preview_samples]
+
 # --- Session Summary ---
 st.markdown("### Session Summary")
 
-# Frequencies
 st.write("**Base Frequencies (Hz):**")
 st.write(f"- Frequency 1: {freq1} Hz")
 st.write(f"- Frequency 2: {freq2} Hz")
 st.write(f"- Frequency 3: {freq3} Hz")
 
-# Enabled FX
 enabled_fx = [key for key in fx_enabled if fx_enabled[key]]
 if enabled_fx:
     st.write("**Enabled Audio FX:**")
@@ -153,36 +158,34 @@ else:
 stereo = np.stack((left, right), axis=-1)
 output = np.int16(stereo * 32767)
 
-# --- Auto Audio Preview ---
+# --- Audio Preview ---
 st.subheader("Audio Preview")
 try:
-    stereo = np.stack((left, right), axis=-1)
-    output = np.int16(stereo * 32767)
+    preview_stereo = np.stack((preview_left, preview_right), axis=-1)
+    preview_output = np.int16(preview_stereo * 32767)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-        write(f.name, sample_rate, output)
+        write(f.name, sample_rate, preview_output)
         st.audio(f.name)
 
-        with open(f.name, "rb") as file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f_full:
+        write(f_full.name, sample_rate, output)
+        with open(f_full.name, "rb") as file:
             st.download_button("Download .WAV", data=file.read(), file_name="soundlab_output.wav")
 except Exception as e:
     st.error(f"Audio generation error: {e}")
 
-import streamlit.components.v1 as components
-
 # --- 3D Data Conversion ---
-amp_preview = np.abs((left + right) / 2)
+amp_preview = np.abs((preview_left + preview_right) / 2)
 amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
 amp_data = amp_sample.tolist()
-amp_json = json.dumps(amp_data).replace("</", "<\\/")  # prevents crashing from </script>
+amp_json = json.dumps(amp_data).replace("</", "<\\/")
 
 # --- 3D Animation using Three.js ---
-import streamlit.components.v1 as components
-
 st.subheader("3D Sound Animation")
 three_js_visual = f"""
-<div id="container"></div>
-<script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
+<div id=\"container\"></div>
+<script src=\"https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js\"></script>
 <script>
   const ampData = JSON.parse('{amp_json}');
 
@@ -206,10 +209,11 @@ three_js_visual = f"""
   let index = 0;
   function animate() {{
     requestAnimationFrame(animate);
-    const scale = 1 + (ampData[index % ampData.length] * 2);
+    const amp = ampData[index % ampData.length];
+    const scale = 1 + (amp * 2);
     torusKnot.scale.set(scale, scale, scale);
-    torusKnot.rotation.x += 0.01 + ampData[index % ampData.length] * 0.05;
-    torusKnot.rotation.y += 0.01 + ampData[index % ampData.length] * 0.05;
+    torusKnot.rotation.x += 0.01 + amp * 0.05;
+    torusKnot.rotation.y += 0.01 + amp * 0.05;
     index++;
     renderer.render(scene, camera);
   }}
