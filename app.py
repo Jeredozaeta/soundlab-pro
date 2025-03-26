@@ -5,6 +5,7 @@ from scipy.signal import butter, filtfilt
 import matplotlib.pyplot as plt
 import tempfile
 import json
+import streamlit.components.v1 as components
 
 # --- UI Setup ---
 st.set_page_config(page_title="SoundLab Pro Ultimate", layout="wide")
