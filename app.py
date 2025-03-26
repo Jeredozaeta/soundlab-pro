@@ -127,6 +127,26 @@ max_val = max(np.max(np.abs(left)), np.max(np.abs(right)))
 if max_val > 0:
     left /= max_val
     right /= max_val
+# --- Session Summary ---
+st.markdown("### Session Summary")
+
+# Frequencies
+st.write("**Base Frequencies (Hz):**")
+st.write(f"- Frequency 1: {freq1} Hz")
+st.write(f"- Frequency 2: {freq2} Hz")
+st.write(f"- Frequency 3: {freq3} Hz")
+
+# Enabled FX
+enabled_fx = [key for key in fx_enabled if fx_enabled[key]]
+if enabled_fx:
+    st.write("**Enabled Audio FX:**")
+    for key in enabled_fx:
+        fx_str = f"- {key}"
+        if key in sliders:
+            fx_str += f" | Value: {sliders[key]}"
+        st.markdown(fx_str)
+else:
+    st.write("*No audio FX applied.*")
 
 # --- Waveform Visualization ---
 st.subheader("Waveform Visualizer")
@@ -142,8 +162,63 @@ st.pyplot(fig)
 stereo = np.stack((left, right), axis=-1)
 output = np.int16(stereo * 32767)
 
-if st.button("Generate Preview"):
+# --- Auto Audio Preview ---
+st.subheader("Audio Preview")
+try:
+    stereo = np.stack((left, right), axis=-1)
+    output = np.int16(stereo * 32767)
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
         write(f.name, sample_rate, output)
         st.audio(f.name)
-        st.download_button("Download .WAV", data=open(f.name, "rb").read(), file_name="soundlab_output.wav")
+
+        with open(f.name, "rb") as file:
+            st.download_button("Download .WAV", data=file.read(), file_name="soundlab_output.wav")
+except Exception as e:
+    st.error(f"Audio generation error: {e}")
+
+import streamlit.components.v1 as components
+
+# --- 3D Animation Placeholder using Three.js ---
+st.subheader("3D Sound Animation")
+three_js_visual = f"""
+<div id="container"></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
+<script>
+  const ampData = {amp_json};
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({{ alpha: true }});
+  renderer.setSize(400, 400);
+  document.getElementById("container").appendChild(renderer.domElement);
+
+  const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+  const material = new THREE.MeshStandardMaterial({{ color: 0xff00ff, wireframe: true }});
+  const torusKnot = new THREE.Mesh(geometry, material);
+  scene.add(torusKnot);
+
+  const light = new THREE.PointLight(0xffffff, 1, 100);
+  light.position.set(10, 10, 10);
+  scene.add(light);
+
+  camera.position.z = 5;
+
+  let index = 0;
+  function animate() {{
+    requestAnimationFrame(animate);
+
+    const scale = 1 + (ampData[index % ampData.length] * 2);
+    torusKnot.scale.set(scale, scale, scale);
+    torusKnot.rotation.x += 0.01 + ampData[index % ampData.length] * 0.05;
+    torusKnot.rotation.y += 0.01 + ampData[index % ampData.length] * 0.05;
+
+    index++;
+    renderer.render(scene, camera);
+  }}
+
+  animate();
+</script>
+"""
+
+components.html(three_js_visual, height=300)
