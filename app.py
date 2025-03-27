@@ -13,9 +13,9 @@ st.title("SoundLab Pro – Ultimate Session Generator")
 
 # --- Frequency Sliders ---
 st.subheader("Frequencies (Hz)")
-freq1 = st.slider("Frequency 1", 20, 20000, 528)
-freq2 = st.slider("Frequency 2", 20, 20000, 963)
-freq3 = st.slider("Frequency 3", 20, 20000, 40)
+freq1 = st.slider("Frequency 1", 0, 20000, 528)
+freq2 = st.slider("Frequency 2", 0, 20000, 963)
+freq3 = st.slider("Frequency 3", 0, 20000, 40)
 
 # --- Duration ---
 duration_min = st.slider("Duration (minutes)", 1, 60, 5)
@@ -131,14 +131,13 @@ if max_val > 0:
     right /= max_val
 
 # --- Preview Trim ---
-preview_duration = min(30, duration)  # Trim preview to 30 seconds
+preview_duration = min(30, duration)
 preview_samples = int(preview_duration * sample_rate)
 preview_left = left[:preview_samples]
 preview_right = right[:preview_samples]
 
 # --- Session Summary ---
 st.markdown("### Session Summary")
-
 st.write("**Base Frequencies (Hz):**")
 st.write(f"- Frequency 1: {freq1} Hz")
 st.write(f"- Frequency 2: {freq2} Hz")
@@ -182,38 +181,38 @@ amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 els
 amp_data = amp_sample.tolist()
 amp_json = json.dumps(amp_data).replace("</", "<\\/")
 
-# --- 3D Data Conversion ---
-amp_preview = np.abs((preview_left + preview_right) / 2)
-amp_sample = amp_preview[::len(amp_preview)//100] if len(amp_preview) >= 100 else amp_preview
-amp_data = amp_sample.tolist()
-amp_json_safe = json.dumps(amp_data).replace("\\", "\\\\").replace("'", "\\'").replace("</", "<\\/")
+# --- 3D Sound Animation (Idle Until Playback) ---
+st.markdown("---")
+st.subheader("3D Sound Animation (Idle Until Playback)")
 
-# --- 3D Animation using Three.js ---
+placeholder = st.empty()
+animate = st.button("Play 3D Animation")
+
 three_js_visual = f"""
-<div id="container"></div>
+<div id="container" style="margin:auto; width: 400px; height: 400px;"></div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
 <script>
-const ampData = JSON.parse('{amp_json_safe}');
+  const ampData = JSON.parse('{amp_json}');
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({{ alpha: true }});
-renderer.setSize(400, 400);
-document.getElementById("container").appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({{ alpha: true }});
+  renderer.setSize(400, 400);
+  document.getElementById("container").appendChild(renderer.domElement);
 
-const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
-const material = new THREE.MeshStandardMaterial({{ color: 0xff00ff, wireframe: true }});
-const torusKnot = new THREE.Mesh(geometry, material);
-scene.add(torusKnot);
+  const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+  const material = new THREE.MeshStandardMaterial({{ color: 0xff00ff, wireframe: true }});
+  const torusKnot = new THREE.Mesh(geometry, material);
+  scene.add(torusKnot);
 
-const light = new THREE.PointLight(0xffffff, 1, 100);
-light.position.set(10, 10, 10);
-scene.add(light);
+  const light = new THREE.PointLight(0xffffff, 1, 100);
+  light.position.set(10, 10, 10);
+  scene.add(light);
 
-camera.position.z = 5;
+  camera.position.z = 5;
 
-let index = 0;
-function animate() {{
+  let index = 0;
+  function animate() {{
     requestAnimationFrame(animate);
     const amp = ampData[index % ampData.length];
     const scale = 1 + (amp * 2);
@@ -222,14 +221,13 @@ function animate() {{
     torusKnot.rotation.y += 0.01 + amp * 0.05;
     index++;
     renderer.render(scene, camera);
-}}
+  }}
 
-animate();
+  animate();
 </script>
 """
 
-# --- Render HTML ---
-try:
-    components.html(three_js_visual, height=400)
-except Exception as e:
-    st.error(f"3D animation failed: {e}")
+if animate:
+    components.html(three_js_visual, height=400, scrolling=False)
+else:
+    st.markdown("3D visual will appear here once playback begins.")
